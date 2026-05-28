@@ -1,15 +1,19 @@
 import { clearCanvas, drawDivision } from './rendering.js';
 
 export class Game {
-  constructor({ ctx, width, height, divisions }) {
+  constructor({ ctx, canvas, width, height, divisions }) {
     this.ctx = ctx;
+    this.canvas = canvas;
     this.width = width;
     this.height = height;
     this.divisions = divisions;
     this.lastTimestamp = 0;
+    this.elapsedSeconds = 0;
+    this.selectedDivision = null;
   }
 
   start() {
+    this.canvas.addEventListener('click', (event) => this.handleCanvasClick(event));
     requestAnimationFrame((timestamp) => this.loop(timestamp));
   }
 
@@ -18,6 +22,7 @@ export class Game {
       ? (timestamp - this.lastTimestamp) / 1000
       : 0;
     this.lastTimestamp = timestamp;
+    this.elapsedSeconds += deltaTimeSeconds;
 
     this.draw();
     this.update(deltaTimeSeconds);
@@ -29,6 +34,7 @@ export class Game {
     clearCanvas(this.ctx, this.width, this.height);
 
     for (const division of this.divisions) {
+      division.alpha = division.getAlpha(this.elapsedSeconds);
       drawDivision(this.ctx, division);
     }
   }
@@ -36,6 +42,31 @@ export class Game {
   update(deltaTimeSeconds) {
     for (const division of this.divisions) {
       division.moveTowardsTarget(deltaTimeSeconds);
+    }
+  }
+
+  handleCanvasClick(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    let clickedDivision = null;
+
+    for (let index = this.divisions.length - 1; index >= 0; index -= 1) {
+      const division = this.divisions[index];
+      if (division.containsPoint(mouseX, mouseY)) {
+        clickedDivision = division;
+        break;
+      }
+    }
+
+    if (this.selectedDivision) {
+      this.selectedDivision.isSelected = false;
+    }
+
+    this.selectedDivision = clickedDivision;
+
+    if (this.selectedDivision) {
+      this.selectedDivision.isSelected = true;
     }
   }
 }

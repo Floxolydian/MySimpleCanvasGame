@@ -23,6 +23,7 @@ window.addEventListener('resize', () => {
 const divisions = createBasicScenario(initialWidth, initialHeight);
 const game = new Game({
   ctx,
+  canvas,
   width: initialWidth,
   height: initialHeight,
   divisions,

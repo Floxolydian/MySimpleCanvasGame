@@ -6,6 +6,7 @@ export class Division {
     this.targetPosition = { ...targetPosition };
     this.speed = speed;
     this.size = { width: 48, height: 34 };
+    this.isSelected = false;
   }
 
   moveTowardsTarget(deltaTimeSeconds) {
@@ -30,5 +31,26 @@ export class Division {
 
     this.position.x += unitX * maxDistance;
     this.position.y += unitY * maxDistance;
+  }
+
+  containsPoint(x, y) {
+    const left = this.position.x - this.size.width / 2;
+    const top = this.position.y - this.size.height / 2;
+    const right = left + this.size.width;
+    const bottom = top + this.size.height;
+
+    return x >= left && x <= right && y >= top && y <= bottom;
+  }
+
+  getAlpha(elapsedSeconds) {
+    if (!this.isSelected) {
+      return 1;
+    }
+
+    const cycleDuration = 1;
+    const normalizedTime = (elapsedSeconds % cycleDuration) / cycleDuration;
+    const pulse = 1 - Math.abs(normalizedTime * 2 - 1);
+
+    return 1 - pulse * 0.4;
   }
 }
