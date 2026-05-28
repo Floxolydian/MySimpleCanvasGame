@@ -36,6 +36,7 @@ export class Game {
 
     for (const division of this.divisions) {
       division.alpha = division.getAlpha(this.elapsedSeconds);
+      division.combatFlashAlpha = division.getCombatFlashAlpha(this.elapsedSeconds);
       drawDivision(this.ctx, division);
     }
 
@@ -44,7 +45,81 @@ export class Game {
 
   update(deltaTimeSeconds) {
     for (const division of this.divisions) {
+      division.inCombat = false;
+      division.combatContacts = 0;
+    }
+
+    for (const division of this.divisions) {
+      division.applyVelocity(deltaTimeSeconds);
       division.moveTowardsTarget(deltaTimeSeconds);
+      division.dampVelocity();
+    }
+
+    this.resolveCollisions();
+    this.updateCombatContacts();
+
+    for (const division of this.divisions) {
+      division.applyCombatEffects(deltaTimeSeconds);
+    }
+  }
+
+  resolveCollisions() {
+    for (let i = 0; i < this.divisions.length; i += 1) {
+      const a = this.divisions[i];
+
+      for (let j = i + 1; j < this.divisions.length; j += 1) {
+        const b = this.divisions[j];
+        const dx = b.position.x - a.position.x;
+        const dy = b.position.y - a.position.y;
+        const distance = Math.hypot(dx, dy) || 0.0001;
+        const minDistance = a.getCollisionRadius() + b.getCollisionRadius();
+
+        if (distance >= minDistance) {
+          continue;
+        }
+
+        const overlap = minDistance - distance;
+        const unitX = dx / distance;
+        const unitY = dy / distance;
+        const pushDistance = overlap / 2;
+        const repelStrength = 120;
+
+        a.position.x -= unitX * pushDistance;
+        a.position.y -= unitY * pushDistance;
+        b.position.x += unitX * pushDistance;
+        b.position.y += unitY * pushDistance;
+
+        a.xVelocity -= unitX * repelStrength;
+        a.yVelocity -= unitY * repelStrength;
+        b.xVelocity += unitX * repelStrength;
+        b.yVelocity += unitY * repelStrength;
+      }
+    }
+  }
+
+  updateCombatContacts() {
+    for (let i = 0; i < this.divisions.length; i += 1) {
+      const a = this.divisions[i];
+
+      for (let j = i + 1; j < this.divisions.length; j += 1) {
+        const b = this.divisions[j];
+
+        if (a.team === b.team) {
+          continue;
+        }
+
+        const dx = b.position.x - a.position.x;
+        const dy = b.position.y - a.position.y;
+        const distance = Math.hypot(dx, dy);
+        const contactDistance = a.combatRange + b.combatRange;
+
+        if (distance <= contactDistance) {
+          a.inCombat = true;
+          b.inCombat = true;
+          a.combatContacts += 1;
+          b.combatContacts += 1;
+        }
+      }
     }
   }
 

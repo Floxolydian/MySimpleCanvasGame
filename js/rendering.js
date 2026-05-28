@@ -26,6 +26,14 @@ export function drawDivision(ctx, division) {
   ctx.save();
   ctx.globalAlpha = alpha;
 
+  const combatFlashAlpha = division.combatFlashAlpha ?? 0;
+  if (combatFlashAlpha > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${combatFlashAlpha.toFixed(3)})`;
+  } else {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+  }
+  ctx.fillRect(x, y, width, height);
+
   drawFrame(ctx, x, y, width, height, color);
 
   if (division.type === 'infantry') {
@@ -35,6 +43,55 @@ export function drawDivision(ctx, division) {
     drawDiagonal(ctx, x, y + height, x + width, y);
   }
 
+  drawCombatRange(ctx, division);
+  drawTargetArrow(ctx, division);
+
+  ctx.restore();
+}
+
+function drawCombatRange(ctx, division) {
+  ctx.save();
+  ctx.strokeStyle = division.inCombat ? 'rgba(255, 80, 80, 0.8)' : 'rgba(180, 180, 180, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(division.position.x, division.position.y, division.combatRange, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTargetArrow(ctx, division) {
+  const dx = division.targetPosition.x - division.position.x;
+  const dy = division.targetPosition.y - division.position.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance < 2) {
+    return;
+  }
+
+  const unitX = dx / distance;
+  const unitY = dy / distance;
+  const startX = division.position.x;
+  const startY = division.position.y;
+  const arrowLength = Math.min(distance, 36);
+  const endX = startX + unitX * arrowLength;
+  const endY = startY + unitY * arrowLength;
+  const headSize = 6;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(endX - unitX * headSize - unitY * headSize * 0.7, endY - unitY * headSize + unitX * headSize * 0.7);
+  ctx.lineTo(endX - unitX * headSize + unitY * headSize * 0.7, endY - unitY * headSize - unitX * headSize * 0.7);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.fill();
   ctx.restore();
 }
 
