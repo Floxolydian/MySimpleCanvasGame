@@ -2,6 +2,7 @@ import {
   clearCanvas,
   drawControlHexes,
   drawDivision,
+  drawFpsCounter,
   drawGameVersion,
 } from './rendering.js';
 
@@ -36,6 +37,8 @@ export class Game {
     this.version = version;
     this.lastTimestamp = 0;
     this.elapsedSeconds = 0;
+    this.fpsMeasurements = [];
+    this.averageFps = null;
     this.selectedDivision = null;
     this.controlHexes = this.createControlHexes(CONTROL_HEX_RADIUS);
     this.initializeControlHexes();
@@ -52,6 +55,7 @@ export class Game {
       : 0;
     this.lastTimestamp = timestamp;
     this.elapsedSeconds += deltaTimeSeconds;
+    this.recordFpsMeasurement(deltaTimeSeconds);
 
     this.draw();
     this.update(deltaTimeSeconds);
@@ -71,6 +75,23 @@ export class Game {
     }
 
     drawGameVersion(this.ctx, this.version);
+    drawFpsCounter(this.ctx, this.averageFps);
+  }
+
+  recordFpsMeasurement(deltaTimeSeconds) {
+    if (deltaTimeSeconds <= 0) {
+      return;
+    }
+
+    const currentFps = 1 / deltaTimeSeconds;
+    this.fpsMeasurements.push(currentFps);
+
+    if (this.fpsMeasurements.length > 10) {
+      this.fpsMeasurements.shift();
+    }
+
+    const totalFps = this.fpsMeasurements.reduce((total, fps) => total + fps, 0);
+    this.averageFps = totalFps / this.fpsMeasurements.length;
   }
 
   update(deltaTimeSeconds) {
