@@ -3,6 +3,18 @@ import { clearCanvas, drawDivision, drawGameVersion } from './rendering.js';
 const FLEE_DISTANCE = 220;
 const FLEE_PADDING = 32;
 
+function getDivisionBounds(division, canvasWidth, canvasHeight, padding = 0) {
+  const halfWidth = division.size.width / 2;
+  const halfHeight = division.size.height / 2;
+
+  return {
+    minX: halfWidth + padding,
+    maxX: canvasWidth - halfWidth - padding,
+    minY: halfHeight + padding,
+    maxY: canvasHeight - halfHeight - padding,
+  };
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -60,10 +72,16 @@ export class Game {
     for (const division of this.divisions) {
       division.applyVelocity(deltaTimeSeconds);
       division.moveTowardsTarget(deltaTimeSeconds);
+      this.keepDivisionOnMap(division);
       division.dampVelocity();
     }
 
     this.resolveCollisions();
+
+    for (const division of this.divisions) {
+      this.keepDivisionOnMap(division);
+    }
+
     this.updateCombatContacts();
 
     for (const division of this.divisions) {
@@ -119,18 +137,45 @@ export class Game {
     const unitX = awayX / magnitude;
     const unitY = awayY / magnitude;
 
-    division.targetPosition = {
-      x: clamp(
-        division.position.x + unitX * FLEE_DISTANCE,
-        FLEE_PADDING,
-        this.width - FLEE_PADDING
-      ),
-      y: clamp(
-        division.position.y + unitY * FLEE_DISTANCE,
-        FLEE_PADDING,
-        this.height - FLEE_PADDING
-      ),
+    division.targetPosition = this.clampPointToMap(
+      division,
+      division.position.x + unitX * FLEE_DISTANCE,
+      division.position.y + unitY * FLEE_DISTANCE,
+      FLEE_PADDING
+    );
+  }
+
+  clampPointToMap(division, x, y, padding = 0) {
+    const bounds = getDivisionBounds(division, this.width, this.height, padding);
+
+    return {
+      x: clamp(x, bounds.minX, bounds.maxX),
+      y: clamp(y, bounds.minY, bounds.maxY),
     };
+  }
+
+  keepDivisionOnMap(division) {
+    const clampedPosition = this.clampPointToMap(
+      division,
+      division.position.x,
+      division.position.y
+    );
+
+    if (clampedPosition.x !== division.position.x) {
+      division.position.x = clampedPosition.x;
+      division.xVelocity = 0;
+    }
+
+    if (clampedPosition.y !== division.position.y) {
+      division.position.y = clampedPosition.y;
+      division.yVelocity = 0;
+    }
+
+    division.targetPosition = this.clampPointToMap(
+      division,
+      division.targetPosition.x,
+      division.targetPosition.y
+    );
   }
 
   removeDestroyedDivisions() {
@@ -214,7 +259,11 @@ export class Game {
     const mouseY = event.clientY - rect.top;
 
     if (event.ctrlKey && this.selectedDivision) {
-      this.selectedDivision.targetPosition = { x: mouseX, y: mouseY };
+      this.selectedDivision.targetPosition = this.clampPointToMap(
+        this.selectedDivision,
+        mouseX,
+        mouseY
+      );
       return;
     }
 

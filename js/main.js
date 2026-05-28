@@ -1,7 +1,7 @@
 import { Game } from './game.js';
 import { createBasicScenario } from './scenario.js';
 
-const GAME_VERSION = '1.0.3';
+const GAME_VERSION = '1.0.4';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');

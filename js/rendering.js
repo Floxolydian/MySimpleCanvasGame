@@ -28,11 +28,13 @@ function drawVerticalMeter(ctx, x, y, height, percent, color) {
   ctx.fillRect(x, y + height - fillHeight, barWidth, fillHeight);
 }
 
-function drawStatusMeters(ctx, division, x, y, height) {
-  drawVerticalMeter(ctx, x - 7, y, height, division.strength, '#35e05a');
+function drawStatusMeters(ctx, division, x, y, width, height) {
+  const meterX = x + width + 5;
+
+  drawVerticalMeter(ctx, meterX, y, height, division.strength, '#35e05a');
   drawVerticalMeter(
     ctx,
-    x - 3,
+    meterX + 4,
     y,
     height,
     division.morale,
@@ -41,9 +43,9 @@ function drawStatusMeters(ctx, division, x, y, height) {
 
   ctx.font = '8px Arial, sans-serif';
   ctx.fillStyle = division.isBroken ? '#ffffff' : 'rgba(255, 255, 255, 0.82)';
-  ctx.textAlign = 'right';
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`${Math.round(division.morale)}%`, x - 10, y + height / 2);
+  ctx.fillText(`${Math.round(division.morale)}%`, meterX + 10, y + height / 2);
 }
 
 export function drawDivision(ctx, division) {
@@ -79,7 +81,7 @@ export function drawDivision(ctx, division) {
     drawDiagonal(ctx, x, y + height, x + width, y);
   }
 
-  drawStatusMeters(ctx, division, x, y, height);
+  drawStatusMeters(ctx, division, x, y, width, height);
   drawCombatRange(ctx, division);
   drawTargetArrow(ctx, division);
 
