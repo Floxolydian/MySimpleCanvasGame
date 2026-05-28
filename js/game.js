@@ -1,12 +1,13 @@
-import { clearCanvas, drawDivision } from './rendering.js';
+import { clearCanvas, drawDivision, drawGameVersion } from './rendering.js';
 
 export class Game {
-  constructor({ ctx, canvas, width, height, divisions }) {
+  constructor({ ctx, canvas, width, height, divisions, version }) {
     this.ctx = ctx;
     this.canvas = canvas;
     this.width = width;
     this.height = height;
     this.divisions = divisions;
+    this.version = version;
     this.lastTimestamp = 0;
     this.elapsedSeconds = 0;
     this.selectedDivision = null;
@@ -37,6 +38,8 @@ export class Game {
       division.alpha = division.getAlpha(this.elapsedSeconds);
       drawDivision(this.ctx, division);
     }
+
+    drawGameVersion(this.ctx, this.version);
   }
 
   update(deltaTimeSeconds) {

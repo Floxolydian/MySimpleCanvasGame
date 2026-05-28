@@ -41,3 +41,13 @@ export function drawDivision(ctx, division) {
 export function clearCanvas(ctx, width, height) {
   ctx.clearRect(0, 0, width, height);
 }
+
+export function drawGameVersion(ctx, version) {
+  ctx.save();
+  ctx.font = '10px Arial, sans-serif';
+  ctx.fillStyle = '#999999';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`v${version}`, 6, 6);
+  ctx.restore();
+}
