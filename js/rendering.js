@@ -21,6 +21,10 @@ export function drawDivision(ctx, division) {
   const { width, height } = division.size;
   const x = division.position.x - width / 2;
   const y = division.position.y - height / 2;
+  const alpha = division.alpha ?? 1;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
 
   drawFrame(ctx, x, y, width, height, color);
 
@@ -30,6 +34,8 @@ export function drawDivision(ctx, division) {
   } else if (division.type === 'cavalry') {
     drawDiagonal(ctx, x, y + height, x + width, y);
   }
+
+  ctx.restore();
 }
 
 export function clearCanvas(ctx, width, height) {
