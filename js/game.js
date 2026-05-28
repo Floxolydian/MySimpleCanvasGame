@@ -28,11 +28,12 @@ function clamp(value, min, max) {
 }
 
 export class Game {
-  constructor({ ctx, canvas, width, height, divisions, version }) {
+  constructor({ ctx, canvas, width, height, renderScale = 1, divisions, version }) {
     this.ctx = ctx;
     this.canvas = canvas;
     this.width = width;
     this.height = height;
+    this.renderScale = renderScale;
     this.divisions = divisions;
     this.version = version;
     this.lastTimestamp = 0;
@@ -64,7 +65,10 @@ export class Game {
   }
 
   draw() {
-    clearCanvas(this.ctx, this.width, this.height);
+    clearCanvas(this.ctx, this.canvas.width, this.canvas.height);
+
+    this.ctx.save();
+    this.ctx.scale(this.renderScale, this.renderScale);
     drawControlHexes(this.ctx, this.controlHexes);
 
     for (const division of this.divisions) {
@@ -76,6 +80,7 @@ export class Game {
 
     drawGameVersion(this.ctx, this.version);
     drawFpsCounter(this.ctx, this.averageFps);
+    this.ctx.restore();
   }
 
   recordFpsMeasurement(deltaTimeSeconds) {
@@ -383,8 +388,8 @@ export class Game {
 
   handleCanvasClick(event) {
     const rect = this.canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
+    const mouseX = (event.clientX - rect.left) / this.renderScale;
+    const mouseY = (event.clientY - rect.top) / this.renderScale;
 
     if (event.ctrlKey && this.selectedDivision) {
       this.selectedDivision.targetPosition = this.clampPointToMap(

@@ -1,7 +1,8 @@
 import { Game } from './game.js';
 import { createBasicScenario } from './scenario.js';
+import { RENDER_SCALE, ZOOM_OUT_FACTOR } from './scale.js';
 
-const GAME_VERSION = '1.0.6';
+const GAME_VERSION = '1.0.7';
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -22,12 +23,16 @@ window.addEventListener('resize', () => {
   );
 });
 
-const divisions = createBasicScenario(initialWidth, initialHeight);
+const worldWidth = initialWidth * ZOOM_OUT_FACTOR;
+const worldHeight = initialHeight * ZOOM_OUT_FACTOR;
+
+const divisions = createBasicScenario(worldWidth, worldHeight);
 const game = new Game({
   ctx,
   canvas,
-  width: initialWidth,
-  height: initialHeight,
+  width: worldWidth,
+  height: worldHeight,
+  renderScale: RENDER_SCALE,
   divisions,
   version: GAME_VERSION,
 });
