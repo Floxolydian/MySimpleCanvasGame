@@ -51,6 +51,6 @@ export class Division {
     const normalizedTime = (elapsedSeconds % cycleDuration) / cycleDuration;
     const pulse = 1 - Math.abs(normalizedTime * 2 - 1);
 
-    return 1 - pulse * 0.4;
+    return 1 - pulse * 0.6;
   }
 }

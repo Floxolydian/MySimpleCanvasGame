@@ -52,6 +52,12 @@ export class Game {
     const rect = this.canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
+
+    if (event.ctrlKey && this.selectedDivision) {
+      this.selectedDivision.targetPosition = { x: mouseX, y: mouseY };
+      return;
+    }
+
     let clickedDivision = null;
 
     for (let index = this.divisions.length - 1; index >= 0; index -= 1) {
