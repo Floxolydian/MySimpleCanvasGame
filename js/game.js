@@ -1,5 +1,12 @@
 import { clearCanvas, drawDivision, drawGameVersion } from './rendering.js';
 
+const FLEE_DISTANCE = 220;
+const FLEE_PADDING = 32;
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 export class Game {
   constructor({ ctx, canvas, width, height, divisions, version }) {
     this.ctx = ctx;
@@ -37,6 +44,7 @@ export class Game {
     for (const division of this.divisions) {
       division.alpha = division.getAlpha(this.elapsedSeconds);
       division.combatFlashAlpha = division.getCombatFlashAlpha(this.elapsedSeconds);
+      division.brokenFlashAlpha = division.getBrokenFlashAlpha(this.elapsedSeconds);
       drawDivision(this.ctx, division);
     }
 
@@ -59,8 +67,85 @@ export class Game {
     this.updateCombatContacts();
 
     for (const division of this.divisions) {
+      const wasBroken = division.isBroken;
       division.applyCombatEffects(deltaTimeSeconds);
+
+      if (!wasBroken && division.isBroken) {
+        this.setFleeTarget(division);
+      }
     }
+
+    for (const division of this.divisions) {
+      if (division.isBroken && division.inCombat) {
+        this.setFleeTarget(division);
+      }
+
+      division.recoverMorale(deltaTimeSeconds);
+    }
+
+    this.removeDestroyedDivisions();
+  }
+
+  setFleeTarget(division) {
+    let awayX = 0;
+    let awayY = 0;
+
+    for (const other of this.divisions) {
+      if (other === division || other.team === division.team) {
+        continue;
+      }
+
+      const dx = division.position.x - other.position.x;
+      const dy = division.position.y - other.position.y;
+      const distance = Math.hypot(dx, dy);
+      const influenceDistance = division.combatRange + other.combatRange;
+
+      if (distance > influenceDistance) {
+        continue;
+      }
+
+      const safeDistance = distance || 0.0001;
+      const weight = 1 + (influenceDistance - distance) / influenceDistance;
+      awayX += (dx / safeDistance) * weight;
+      awayY += (dy / safeDistance) * weight;
+    }
+
+    if (awayX === 0 && awayY === 0) {
+      awayX = division.position.x - this.width / 2;
+      awayY = division.position.y - this.height / 2;
+    }
+
+    const magnitude = Math.hypot(awayX, awayY) || 1;
+    const unitX = awayX / magnitude;
+    const unitY = awayY / magnitude;
+
+    division.targetPosition = {
+      x: clamp(
+        division.position.x + unitX * FLEE_DISTANCE,
+        FLEE_PADDING,
+        this.width - FLEE_PADDING
+      ),
+      y: clamp(
+        division.position.y + unitY * FLEE_DISTANCE,
+        FLEE_PADDING,
+        this.height - FLEE_PADDING
+      ),
+    };
+  }
+
+  removeDestroyedDivisions() {
+    const survivors = this.divisions.filter((division) => division.strength > 0);
+
+    if (survivors.length === this.divisions.length) {
+      return;
+    }
+
+    if (this.selectedDivision && !survivors.includes(this.selectedDivision)) {
+      this.selectedDivision.isSelected = false;
+      this.selectedDivision = null;
+    }
+
+    this.divisions = survivors;
   }
 
   resolveCollisions() {

@@ -16,6 +16,36 @@ function drawDiagonal(ctx, x1, y1, x2, y2) {
   ctx.stroke();
 }
 
+function drawVerticalMeter(ctx, x, y, height, percent, color) {
+  const barWidth = 3;
+  const clampedPercent = Math.max(0, Math.min(100, percent));
+  const fillHeight = height * (clampedPercent / 100);
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fillRect(x, y, barWidth, height);
+
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y + height - fillHeight, barWidth, fillHeight);
+}
+
+function drawStatusMeters(ctx, division, x, y, height) {
+  drawVerticalMeter(ctx, x - 7, y, height, division.strength, '#35e05a');
+  drawVerticalMeter(
+    ctx,
+    x - 3,
+    y,
+    height,
+    division.morale,
+    division.isBroken ? '#ffffff' : '#5bbcff'
+  );
+
+  ctx.font = '8px Arial, sans-serif';
+  ctx.fillStyle = division.isBroken ? '#ffffff' : 'rgba(255, 255, 255, 0.82)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${Math.round(division.morale)}%`, x - 10, y + height / 2);
+}
+
 export function drawDivision(ctx, division) {
   const color = TEAM_COLORS[division.team] ?? '#dddddd';
   const { width, height } = division.size;
@@ -34,6 +64,12 @@ export function drawDivision(ctx, division) {
   }
   ctx.fillRect(x, y, width, height);
 
+  const brokenFlashAlpha = division.brokenFlashAlpha ?? 0;
+  if (brokenFlashAlpha > 0) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${brokenFlashAlpha.toFixed(3)})`;
+    ctx.fillRect(x, y, width, height);
+  }
+
   drawFrame(ctx, x, y, width, height, color);
 
   if (division.type === 'infantry') {
@@ -43,6 +79,7 @@ export function drawDivision(ctx, division) {
     drawDiagonal(ctx, x, y + height, x + width, y);
   }
 
+  drawStatusMeters(ctx, division, x, y, height);
   drawCombatRange(ctx, division);
   drawTargetArrow(ctx, division);
 
