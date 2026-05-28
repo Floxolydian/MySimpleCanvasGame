@@ -197,3 +197,17 @@ export function drawGameVersion(ctx, version) {
   ctx.fillText(`v${version}`, 6, 6);
   ctx.restore();
 }
+
+export function drawFpsCounter(ctx, averageFps) {
+  if (averageFps === null) {
+    return;
+  }
+
+  ctx.save();
+  ctx.font = '10px Arial, sans-serif';
+  ctx.fillStyle = '#999999';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`FPS: ${averageFps.toFixed(1)}`, 6, 18);
+  ctx.restore();
+}
