@@ -1,3 +1,10 @@
+const MAX_PERCENT = 100;
+const BROKEN_MORALE_THRESHOLD = 20;
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(MAX_PERCENT, value));
+}
+
 export class Division {
   constructor({
     team,
@@ -17,12 +24,13 @@ export class Division {
     this.xVelocity = 0;
     this.yVelocity = 0;
     this.size = { width: 48, height: 34 };
-    this.strength = strength;
-    this.morale = morale;
+    this.strength = clampPercent(strength);
+    this.morale = clampPercent(morale);
     this.combatRange = combatRange;
     this.isSelected = false;
     this.inCombat = false;
     this.combatContacts = 0;
+    this.isBroken = this.morale < BROKEN_MORALE_THRESHOLD;
   }
 
   moveTowardsTarget(deltaTimeSeconds) {
@@ -80,8 +88,40 @@ export class Division {
     const moraleLossPerSecond = 2.2;
     const multiplier = this.combatContacts;
 
-    this.strength = Math.max(0, this.strength - strengthLossPerSecond * multiplier * deltaTimeSeconds);
-    this.morale = Math.max(0, this.morale - moraleLossPerSecond * multiplier * deltaTimeSeconds);
+    this.strength = clampPercent(
+      this.strength - strengthLossPerSecond * multiplier * deltaTimeSeconds
+    );
+    this.morale = clampPercent(
+      this.morale - moraleLossPerSecond * multiplier * deltaTimeSeconds
+    );
+
+    if (this.morale < BROKEN_MORALE_THRESHOLD) {
+      this.isBroken = true;
+    }
+  }
+
+  recoverMorale(deltaTimeSeconds) {
+    if (this.inCombat || !this.isStationary()) {
+      return;
+    }
+
+    const moraleRecoveryPerSecond = 5;
+    this.morale = clampPercent(
+      this.morale + moraleRecoveryPerSecond * deltaTimeSeconds
+    );
+
+    if (this.morale === MAX_PERCENT) {
+      this.isBroken = false;
+    }
+  }
+
+  isStationary() {
+    const targetDx = this.targetPosition.x - this.position.x;
+    const targetDy = this.targetPosition.y - this.position.y;
+    const distanceToTarget = Math.hypot(targetDx, targetDy);
+    const velocity = Math.hypot(this.xVelocity, this.yVelocity);
+
+    return distanceToTarget < 1 && velocity < 1;
   }
 
   containsPoint(x, y) {
@@ -112,5 +152,14 @@ export class Division {
 
     const pulse = (Math.sin(elapsedSeconds * 10) + 1) / 2;
     return 0.2 + pulse * 0.45;
+  }
+
+  getBrokenFlashAlpha(elapsedSeconds) {
+    if (!this.isBroken) {
+      return 0;
+    }
+
+    const pulse = (Math.sin(elapsedSeconds * 18) + 1) / 2;
+    return 0.25 + pulse * 0.65;
   }
 }
