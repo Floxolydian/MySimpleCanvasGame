@@ -46,6 +46,7 @@ export class Game {
   update(deltaTimeSeconds) {
     for (const division of this.divisions) {
       division.inCombat = false;
+      division.combatContacts = 0;
     }
 
     for (const division of this.divisions) {
@@ -56,6 +57,10 @@ export class Game {
 
     this.resolveCollisions();
     this.updateCombatContacts();
+
+    for (const division of this.divisions) {
+      division.applyCombatEffects(deltaTimeSeconds);
+    }
   }
 
   resolveCollisions() {
@@ -67,7 +72,7 @@ export class Game {
         const dx = b.position.x - a.position.x;
         const dy = b.position.y - a.position.y;
         const distance = Math.hypot(dx, dy) || 0.0001;
-        const minDistance = (Math.max(a.size.width, a.size.height) + Math.max(b.size.width, b.size.height)) / 2;
+        const minDistance = a.getCollisionRadius() + b.getCollisionRadius();
 
         if (distance >= minDistance) {
           continue;
@@ -77,7 +82,7 @@ export class Game {
         const unitX = dx / distance;
         const unitY = dy / distance;
         const pushDistance = overlap / 2;
-        const repelStrength = 180;
+        const repelStrength = 120;
 
         a.position.x -= unitX * pushDistance;
         a.position.y -= unitY * pushDistance;
@@ -106,11 +111,13 @@ export class Game {
         const dx = b.position.x - a.position.x;
         const dy = b.position.y - a.position.y;
         const distance = Math.hypot(dx, dy);
-        const contactDistance = Math.max(a.combatRange, b.combatRange);
+        const contactDistance = a.combatRange + b.combatRange;
 
         if (distance <= contactDistance) {
           a.inCombat = true;
           b.inCombat = true;
+          a.combatContacts += 1;
+          b.combatContacts += 1;
         }
       }
     }

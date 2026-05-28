@@ -22,6 +22,7 @@ export class Division {
     this.combatRange = combatRange;
     this.isSelected = false;
     this.inCombat = false;
+    this.combatContacts = 0;
   }
 
   moveTowardsTarget(deltaTimeSeconds) {
@@ -64,6 +65,23 @@ export class Division {
     if (Math.abs(this.yVelocity) < 0.5) {
       this.yVelocity = 0;
     }
+  }
+
+  getCollisionRadius() {
+    return Math.hypot(this.size.width / 2, this.size.height / 2);
+  }
+
+  applyCombatEffects(deltaTimeSeconds) {
+    if (!this.inCombat || this.combatContacts === 0) {
+      return;
+    }
+
+    const strengthLossPerSecond = 1.4;
+    const moraleLossPerSecond = 2.2;
+    const multiplier = this.combatContacts;
+
+    this.strength = Math.max(0, this.strength - strengthLossPerSecond * multiplier * deltaTimeSeconds);
+    this.morale = Math.max(0, this.morale - moraleLossPerSecond * multiplier * deltaTimeSeconds);
   }
 
   containsPoint(x, y) {
