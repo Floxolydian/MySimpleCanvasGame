@@ -1,7 +1,14 @@
-import { clearCanvas, drawDivision, drawGameVersion } from './rendering.js';
+import {
+  clearCanvas,
+  drawControlHexes,
+  drawDivision,
+  drawGameVersion,
+} from './rendering.js';
 
 const FLEE_DISTANCE = 220;
 const FLEE_PADDING = 32;
+const CONTROL_HEX_RADIUS = 34;
+const CONTROL_CAPTURE_DISTANCE = CONTROL_HEX_RADIUS * 2.6;
 
 function getDivisionBounds(division, canvasWidth, canvasHeight, padding = 0) {
   const halfWidth = division.size.width / 2;
@@ -30,6 +37,8 @@ export class Game {
     this.lastTimestamp = 0;
     this.elapsedSeconds = 0;
     this.selectedDivision = null;
+    this.controlHexes = this.createControlHexes(CONTROL_HEX_RADIUS);
+    this.initializeControlHexes();
   }
 
   start() {
@@ -52,6 +61,7 @@ export class Game {
 
   draw() {
     clearCanvas(this.ctx, this.width, this.height);
+    drawControlHexes(this.ctx, this.controlHexes);
 
     for (const division of this.divisions) {
       division.alpha = division.getAlpha(this.elapsedSeconds);
@@ -82,6 +92,8 @@ export class Game {
       this.keepDivisionOnMap(division);
     }
 
+    this.updateControlHexes();
+
     this.updateCombatContacts();
 
     for (const division of this.divisions) {
@@ -102,6 +114,101 @@ export class Game {
     }
 
     this.removeDestroyedDivisions();
+  }
+
+  createControlHexes(radius) {
+    const hexes = [];
+    const width = radius * 2;
+    const height = Math.sqrt(3) * radius;
+    const horizontalSpacing = radius * 1.5;
+    const verticalSpacing = height;
+
+    for (
+      let column = 0, x = radius;
+      x < this.width + radius;
+      column += 1, x += horizontalSpacing
+    ) {
+      const yOffset = column % 2 === 0 ? height / 2 : height;
+
+      for (let y = yOffset; y < this.height + height / 2; y += verticalSpacing) {
+        hexes.push({
+          x,
+          y,
+          radius,
+          width,
+          height,
+          team: null,
+        });
+      }
+    }
+
+    return hexes;
+  }
+
+  initializeControlHexes() {
+    for (const hex of this.controlHexes) {
+      const closestDivision = this.getClosestDivisionToPoint(hex.x, hex.y);
+      hex.team = closestDivision?.team ?? null;
+    }
+  }
+
+  updateControlHexes() {
+    for (const hex of this.controlHexes) {
+      const closestDivision = this.getClosestDivisionToPoint(hex.x, hex.y);
+
+      if (!closestDivision) {
+        continue;
+      }
+
+      if (hex.team === null) {
+        hex.team = closestDivision.team;
+        continue;
+      }
+
+      if (closestDivision.team === hex.team) {
+        continue;
+      }
+
+      const closestFriendlyDivision = this.getClosestDivisionToPoint(
+        hex.x,
+        hex.y,
+        hex.team
+      );
+      const enemyIsClosest = !closestFriendlyDivision
+        || closestDivision.distance < closestFriendlyDivision.distance;
+
+      if (enemyIsClosest && closestDivision.distance <= CONTROL_CAPTURE_DISTANCE) {
+        hex.team = closestDivision.team;
+      }
+    }
+  }
+
+  getClosestDivisionToPoint(x, y, team = null) {
+    let closestDivision = null;
+    let closestDistance = Infinity;
+
+    for (const division of this.divisions) {
+      if (team !== null && division.team !== team) {
+        continue;
+      }
+
+      const distance = Math.hypot(division.position.x - x, division.position.y - y);
+
+      if (distance < closestDistance) {
+        closestDivision = division;
+        closestDistance = distance;
+      }
+    }
+
+    if (!closestDivision) {
+      return null;
+    }
+
+    return {
+      division: closestDivision,
+      team: closestDivision.team,
+      distance: closestDistance,
+    };
   }
 
   setFleeTarget(division) {

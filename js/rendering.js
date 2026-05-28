@@ -3,6 +3,56 @@ const TEAM_COLORS = {
   2: '#ff6b6b',
 };
 
+const CONTROL_HEX_COLORS = {
+  1: {
+    fill: 'rgba(77, 163, 255, 0.16)',
+    stroke: 'rgba(77, 163, 255, 0.24)',
+  },
+  2: {
+    fill: 'rgba(255, 107, 107, 0.16)',
+    stroke: 'rgba(255, 107, 107, 0.24)',
+  },
+};
+
+function traceHex(ctx, hex) {
+  ctx.beginPath();
+
+  for (let index = 0; index < 6; index += 1) {
+    const angle = (Math.PI / 3) * index;
+    const x = hex.x + hex.radius * Math.cos(angle);
+    const y = hex.y + hex.radius * Math.sin(angle);
+
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.closePath();
+}
+
+export function drawControlHexes(ctx, hexes) {
+  ctx.save();
+
+  for (const hex of hexes) {
+    const colors = CONTROL_HEX_COLORS[hex.team];
+
+    if (!colors) {
+      continue;
+    }
+
+    traceHex(ctx, hex);
+    ctx.fillStyle = colors.fill;
+    ctx.fill();
+    ctx.strokeStyle = colors.stroke;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawFrame(ctx, x, y, width, height, color) {
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
