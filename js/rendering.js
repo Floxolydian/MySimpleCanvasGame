@@ -146,7 +146,7 @@ function drawStatusMeters(ctx, division, x, y, width, height) {
     division.isBroken ? '#ffffff' : '#5bbcff'
   );
 
-  ctx.font = '8px Arial, sans-serif';
+  ctx.font = '30px Arial, sans-serif';
   ctx.fillStyle = division.isBroken ? '#ffffff' : 'rgba(255, 255, 255, 0.82)';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';

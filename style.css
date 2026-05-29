@@ -90,7 +90,17 @@ body {
 }
 
 .team-card dd {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resource-income {
+  color: #8ee6a3;
+  font-size: 12px;
   font-weight: 700;
 }
 

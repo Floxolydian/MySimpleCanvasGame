@@ -18,10 +18,10 @@ const FLEE_PADDING = 32;
 const CONTROL_HEX_RADIUS = 34;
 const CONTROL_CAPTURE_DISTANCE = CONTROL_HEX_RADIUS * 2.6;
 const CITY_INCOME_INTERVAL_SECONDS = 5;
-const CITY_CASH_INCOME_AMOUNT = 1.0;
-const CITY_MANPOWER_INCOME_AMOUNT = 0.1;
-const CONTROL_HEX_CASH_INCOME_AMOUNT = 0.05;
-const CONTROL_HEX_MANPOWER_INCOME_AMOUNT = 0.02;
+const CITY_CASH_INCOME_AMOUNT = 0.1;
+const CITY_MANPOWER_INCOME_AMOUNT = 0.01;
+const CONTROL_HEX_CASH_INCOME_AMOUNT = 0.005;
+const CONTROL_HEX_MANPOWER_INCOME_AMOUNT = 0.002;
 
 function getDivisionBounds(division, canvasWidth, canvasHeight, padding = 0) {
   const halfWidth = division.size.width / 2;
@@ -43,6 +43,14 @@ function formatResource(value) {
   return value.toFixed(2);
 }
 
+function formatIncome(value) {
+  return `+${formatResource(value)}`;
+}
+
+function formatIncomeRate(value) {
+  return Number(value.toFixed(3)).toString();
+}
+
 export class Game {
   constructor({
     ctx,
@@ -62,7 +70,12 @@ export class Game {
     this.height = height;
     this.renderScale = renderScale;
     this.divisions = divisions;
-    this.teams = teams.map((team) => ({ manpower: 0, ...team }));
+    this.teams = teams.map((team) => ({
+      manpower: 0,
+      lastCashIncome: 0,
+      lastManpowerIncome: 0,
+      ...team,
+    }));
     this.teamPanel = teamPanel;
     this.version = version;
     this.cityIncomeTimer = 0;
@@ -232,7 +245,6 @@ export class Game {
         name: citySeed.name,
         startingTeam: citySeed.team,
       };
-      closestHex.team = citySeed.team;
       usedHexes.add(closestHex);
       cities.push({
         name: citySeed.name,
@@ -274,6 +286,11 @@ export class Game {
   }
 
   awardIncome() {
+    for (const team of this.teams) {
+      team.lastCashIncome = 0;
+      team.lastManpowerIncome = 0;
+    }
+
     for (const hex of this.controlHexes) {
       const controllingTeam = this.teams.find((team) => team.id === hex.team);
 
@@ -281,8 +298,11 @@ export class Game {
         continue;
       }
 
-      controllingTeam.cash += CONTROL_HEX_CASH_INCOME_AMOUNT;
-      controllingTeam.manpower += CONTROL_HEX_MANPOWER_INCOME_AMOUNT;
+      this.awardTeamIncome(
+        controllingTeam,
+        CONTROL_HEX_CASH_INCOME_AMOUNT,
+        CONTROL_HEX_MANPOWER_INCOME_AMOUNT
+      );
     }
 
     for (const city of this.cities) {
@@ -292,9 +312,19 @@ export class Game {
         continue;
       }
 
-      controllingTeam.cash += CITY_CASH_INCOME_AMOUNT;
-      controllingTeam.manpower += CITY_MANPOWER_INCOME_AMOUNT;
+      this.awardTeamIncome(
+        controllingTeam,
+        CITY_CASH_INCOME_AMOUNT,
+        CITY_MANPOWER_INCOME_AMOUNT
+      );
     }
+  }
+
+  awardTeamIncome(team, cashIncome, manpowerIncome) {
+    team.cash += cashIncome;
+    team.manpower += manpowerIncome;
+    team.lastCashIncome += cashIncome;
+    team.lastManpowerIncome += manpowerIncome;
   }
 
   getTeamCityCount(teamId) {
@@ -319,6 +349,8 @@ export class Game {
           team.id,
           team.cash.toFixed(2),
           team.manpower.toFixed(2),
+          team.lastCashIncome.toFixed(2),
+          team.lastManpowerIncome.toFixed(2),
           cityCount,
           controlledHexCount,
         ].join(':');
@@ -360,11 +392,17 @@ export class Game {
           <dl>
             <div>
               <dt>Cash</dt>
-              <dd>${formatResource(team.cash)}</dd>
+              <dd>
+                <span>${formatResource(team.cash)}</span>
+                <span class="resource-income">${formatIncome(team.lastCashIncome)}</span>
+              </dd>
             </div>
             <div>
               <dt>Manpower</dt>
-              <dd>${formatResource(team.manpower)}</dd>
+              <dd>
+                <span>${formatResource(team.manpower)}</span>
+                <span class="resource-income">${formatIncome(team.lastManpowerIncome)}</span>
+              </dd>
             </div>
             <div>
               <dt>Cities</dt>
@@ -384,7 +422,7 @@ export class Game {
 
     this.teamPanel.innerHTML = `
       <h1>Teams</h1>
-      <p class="income-note">Every ${CITY_INCOME_INTERVAL_SECONDS} seconds: cities pay ${formatResource(CITY_CASH_INCOME_AMOUNT)} cash and ${formatResource(CITY_MANPOWER_INCOME_AMOUNT)} manpower; controlled hexes pay ${formatResource(CONTROL_HEX_CASH_INCOME_AMOUNT)} cash and ${formatResource(CONTROL_HEX_MANPOWER_INCOME_AMOUNT)} manpower.</p>
+      <p class="income-note">Every ${CITY_INCOME_INTERVAL_SECONDS} seconds: cities pay ${formatIncomeRate(CITY_CASH_INCOME_AMOUNT)} cash and ${formatIncomeRate(CITY_MANPOWER_INCOME_AMOUNT)} manpower; controlled hexes pay ${formatIncomeRate(CONTROL_HEX_CASH_INCOME_AMOUNT)} cash and ${formatIncomeRate(CONTROL_HEX_MANPOWER_INCOME_AMOUNT)} manpower.</p>
       ${teamRows}
     `;
   }
