@@ -51,7 +51,7 @@ function drawCity(ctx, hex) {
   ctx.fill();
   ctx.stroke();
 
-  ctx.font = '18px Arial, sans-serif';
+  ctx.font = '35px Arial, sans-serif';
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
   ctx.lineWidth = 4;
