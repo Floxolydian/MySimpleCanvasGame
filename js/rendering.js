@@ -194,7 +194,7 @@ export function drawGameVersion(ctx, version) {
   ctx.fillStyle = '#999999';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillText(`v${version}`, 6, 6);
+  ctx.fillText(`v${version}`, 30, 30);
   ctx.restore();
 }
 
@@ -208,6 +208,6 @@ export function drawFpsCounter(ctx, averageFps) {
   ctx.fillStyle = '#999999';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillText(`FPS: ${averageFps.toFixed(1)}`, 6, 18);
+  ctx.fillText(`FPS: ${averageFps.toFixed(1)}`, 30, 60);
   ctx.restore();
 }
