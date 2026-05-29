@@ -4,12 +4,15 @@ import {
   drawDivision,
   drawFpsCounter,
   drawGameVersion,
+  TEAM_COLORS,
 } from './rendering.js';
 
 const FLEE_DISTANCE = 220;
 const FLEE_PADDING = 32;
 const CONTROL_HEX_RADIUS = 34;
 const CONTROL_CAPTURE_DISTANCE = CONTROL_HEX_RADIUS * 2.6;
+const CITY_INCOME_INTERVAL_SECONDS = 5;
+const CITY_INCOME_AMOUNT = 1.0;
 
 function getDivisionBounds(division, canvasWidth, canvasHeight, padding = 0) {
   const halfWidth = division.size.width / 2;
@@ -28,14 +31,29 @@ function clamp(value, min, max) {
 }
 
 export class Game {
-  constructor({ ctx, canvas, width, height, renderScale = 1, divisions, version }) {
+  constructor({
+    ctx,
+    canvas,
+    width,
+    height,
+    renderScale = 1,
+    divisions,
+    teams,
+    citySeeds,
+    teamPanel,
+    version,
+  }) {
     this.ctx = ctx;
     this.canvas = canvas;
     this.width = width;
     this.height = height;
     this.renderScale = renderScale;
     this.divisions = divisions;
+    this.teams = teams;
+    this.teamPanel = teamPanel;
     this.version = version;
+    this.cityIncomeTimer = 0;
+    this.teamPanelSignature = '';
     this.lastTimestamp = 0;
     this.elapsedSeconds = 0;
     this.fpsMeasurements = [];
@@ -43,6 +61,8 @@ export class Game {
     this.selectedDivision = null;
     this.controlHexes = this.createControlHexes(CONTROL_HEX_RADIUS);
     this.initializeControlHexes();
+    this.cities = this.createCities(citySeeds);
+    this.renderTeamPanel();
   }
 
   start() {
@@ -119,6 +139,8 @@ export class Game {
     }
 
     this.updateControlHexes();
+    this.updateCityIncome(deltaTimeSeconds);
+    this.renderTeamPanel();
 
     this.updateCombatContacts();
 
@@ -176,6 +198,124 @@ export class Game {
       const closestDivision = this.getClosestDivisionToPoint(hex.x, hex.y);
       hex.team = closestDivision?.team ?? null;
     }
+  }
+
+
+  createCities(citySeeds = []) {
+    const cities = [];
+    const usedHexes = new Set();
+
+    for (const citySeed of citySeeds) {
+      const closestHex = this.getClosestAvailableHex(citySeed.x, citySeed.y, usedHexes);
+
+      if (!closestHex) {
+        continue;
+      }
+
+      closestHex.city = {
+        name: citySeed.name,
+        startingTeam: citySeed.team,
+      };
+      closestHex.team = citySeed.team;
+      usedHexes.add(closestHex);
+      cities.push({
+        name: citySeed.name,
+        startingTeam: citySeed.team,
+        hex: closestHex,
+      });
+    }
+
+    return cities;
+  }
+
+  getClosestAvailableHex(x, y, usedHexes) {
+    let closestHex = null;
+    let closestDistance = Infinity;
+
+    for (const hex of this.controlHexes) {
+      if (usedHexes.has(hex)) {
+        continue;
+      }
+
+      const distance = Math.hypot(hex.x - x, hex.y - y);
+
+      if (distance < closestDistance) {
+        closestHex = hex;
+        closestDistance = distance;
+      }
+    }
+
+    return closestHex;
+  }
+
+  updateCityIncome(deltaTimeSeconds) {
+    this.cityIncomeTimer += deltaTimeSeconds;
+
+    while (this.cityIncomeTimer >= CITY_INCOME_INTERVAL_SECONDS) {
+      this.cityIncomeTimer -= CITY_INCOME_INTERVAL_SECONDS;
+      this.awardCityIncome();
+    }
+  }
+
+  awardCityIncome() {
+    for (const city of this.cities) {
+      const controllingTeam = this.teams.find((team) => team.id === city.hex.team);
+
+      if (!controllingTeam) {
+        continue;
+      }
+
+      controllingTeam.cash += CITY_INCOME_AMOUNT;
+    }
+  }
+
+  renderTeamPanel() {
+    if (!this.teamPanel) {
+      return;
+    }
+
+    const signature = this.teams
+      .map((team) => {
+        const cityCount = this.cities.filter((city) => city.hex.team === team.id).length;
+        return `${team.id}:${team.cash.toFixed(1)}:${cityCount}`;
+      })
+      .join('|');
+
+    if (signature === this.teamPanelSignature) {
+      return;
+    }
+
+    this.teamPanelSignature = signature;
+
+    const teamRows = this.teams.map((team) => {
+      const cityCount = this.cities.filter((city) => city.hex.team === team.id).length;
+      const color = TEAM_COLORS[team.id] ?? '#dddddd';
+
+      return `
+        <section class="team-card">
+          <div class="team-heading">
+            <span class="team-color" style="background: ${color}"></span>
+            <h2>${team.name}</h2>
+          </div>
+          <dl>
+            <div>
+              <dt>Cash</dt>
+              <dd>${team.cash.toFixed(1)}</dd>
+            </div>
+            <div>
+              <dt>Cities</dt>
+              <dd>${cityCount}</dd>
+            </div>
+          </dl>
+        </section>
+      `;
+    }).join('');
+
+    this.teamPanel.innerHTML = `
+      <h1>Teams</h1>
+      <p class="income-note">Cities pay ${CITY_INCOME_AMOUNT.toFixed(1)} cash every ${CITY_INCOME_INTERVAL_SECONDS} seconds.</p>
+      ${teamRows}
+    `;
   }
 
   updateControlHexes() {

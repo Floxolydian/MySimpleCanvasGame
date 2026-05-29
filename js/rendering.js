@@ -1,6 +1,7 @@
-const TEAM_COLORS = {
+export const TEAM_COLORS = {
   1: '#4da3ff',
   2: '#ff6b6b',
+  3: '#65d16f',
 };
 
 const CONTROL_HEX_COLORS = {
@@ -11,6 +12,10 @@ const CONTROL_HEX_COLORS = {
   2: {
     fill: 'rgba(255, 107, 107, 0.16)',
     stroke: 'rgba(255, 107, 107, 0.24)',
+  },
+  3: {
+    fill: 'rgba(101, 209, 111, 0.16)',
+    stroke: 'rgba(101, 209, 111, 0.24)',
   },
 };
 
@@ -32,6 +37,31 @@ function traceHex(ctx, hex) {
   ctx.closePath();
 }
 
+
+function drawCity(ctx, hex) {
+  const colors = CONTROL_HEX_COLORS[hex.team];
+  const cityRadius = Math.max(8, hex.radius * 0.28);
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 238, 170, 0.92)';
+  ctx.strokeStyle = colors?.stroke ?? 'rgba(255, 255, 255, 0.55)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(hex.x, hex.y, cityRadius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = '18px Arial, sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.lineWidth = 4;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.strokeText(hex.city.name, hex.x, hex.y + cityRadius + 6);
+  ctx.fillText(hex.city.name, hex.x, hex.y + cityRadius + 6);
+  ctx.restore();
+}
+
 export function drawControlHexes(ctx, hexes) {
   ctx.save();
 
@@ -48,6 +78,10 @@ export function drawControlHexes(ctx, hexes) {
     ctx.strokeStyle = colors.stroke;
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    if (hex.city) {
+      drawCity(ctx, hex);
+    }
   }
 
   ctx.restore();
