@@ -122,7 +122,7 @@ function drawTankSymbol(ctx, x, y, width, height) {
 }
 
 function drawVerticalMeter(ctx, x, y, height, percent, color) {
-  const barWidth = 3;
+  const barWidth = 9;
   const clampedPercent = Math.max(0, Math.min(100, percent));
   const fillHeight = height * (clampedPercent / 100);
 
@@ -139,7 +139,7 @@ function drawStatusMeters(ctx, division, x, y, width, height) {
   drawVerticalMeter(ctx, meterX, y, height, division.strength, '#35e05a');
   drawVerticalMeter(
     ctx,
-    meterX + 4,
+    meterX + 10,
     y,
     height,
     division.morale,
@@ -150,7 +150,7 @@ function drawStatusMeters(ctx, division, x, y, width, height) {
   ctx.fillStyle = division.isBroken ? '#ffffff' : 'rgba(255, 255, 255, 0.82)';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`${Math.round(division.morale)}%`, meterX + 10, y + height / 2);
+  ctx.fillText(`${Math.round(division.morale)}%`, meterX + 22, y + height / 2);
 }
 
 export function drawDivision(ctx, division) {

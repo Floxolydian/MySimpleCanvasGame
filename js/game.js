@@ -47,6 +47,10 @@ function formatIncome(value) {
   return `+${formatResource(value)}`;
 }
 
+function formatExpense(value) {
+  return `-${formatResource(value)}`;
+}
+
 function formatIncomeRate(value) {
   return Number(value.toFixed(3)).toString();
 }
@@ -74,6 +78,10 @@ export class Game {
       manpower: 0,
       lastCashIncome: 0,
       lastManpowerIncome: 0,
+      lastCashExpense: 0,
+      lastManpowerExpense: 0,
+      currentCashExpense: 0,
+      currentManpowerExpense: 0,
       ...team,
     }));
     this.teamPanel = teamPanel;
@@ -89,7 +97,8 @@ export class Game {
     this.initializeControlHexes();
     this.cities = this.createCities(citySeeds);
     if (this.teamPanel) {
-      this.teamPanel.addEventListener('click', (event) => this.handleTeamPanelClick(event));
+      this.teamPanel.addEventListener('pointerdown', (event) => this.handleTeamPanelPointerDown(event));
+      this.teamPanel.addEventListener('keydown', (event) => this.handleTeamPanelKeyDown(event));
     }
     this.renderTeamPanel();
   }
@@ -169,7 +178,6 @@ export class Game {
 
     this.updateControlHexes();
     this.updateIncome(deltaTimeSeconds);
-    this.renderTeamPanel();
 
     this.updateCombatContacts();
 
@@ -187,10 +195,11 @@ export class Game {
         this.setFleeTarget(division);
       }
 
-      division.recoverMorale(deltaTimeSeconds);
+      this.recoverDivisionMorale(division, deltaTimeSeconds);
     }
 
     this.removeDestroyedDivisions();
+    this.renderTeamPanel();
   }
 
   createControlHexes(radius) {
@@ -289,6 +298,10 @@ export class Game {
     for (const team of this.teams) {
       team.lastCashIncome = 0;
       team.lastManpowerIncome = 0;
+      team.lastCashExpense = team.currentCashExpense;
+      team.lastManpowerExpense = team.currentManpowerExpense;
+      team.currentCashExpense = 0;
+      team.currentManpowerExpense = 0;
     }
 
     for (const hex of this.controlHexes) {
@@ -327,6 +340,17 @@ export class Game {
     team.lastManpowerIncome += manpowerIncome;
   }
 
+  recordTeamExpense(team, cashExpense, manpowerExpense) {
+    team.currentCashExpense += cashExpense;
+    team.currentManpowerExpense += manpowerExpense;
+  }
+
+  spendTeamResources(team, cashExpense, manpowerExpense) {
+    team.cash = Math.max(0, team.cash - cashExpense);
+    team.manpower = Math.max(0, team.manpower - manpowerExpense);
+    this.recordTeamExpense(team, cashExpense, manpowerExpense);
+  }
+
   getTeamCityCount(teamId) {
     return this.cities.filter((city) => city.hex.team === teamId).length;
   }
@@ -351,6 +375,8 @@ export class Game {
           team.manpower.toFixed(2),
           team.lastCashIncome.toFixed(2),
           team.lastManpowerIncome.toFixed(2),
+          team.lastCashExpense.toFixed(2),
+          team.lastManpowerExpense.toFixed(2),
           cityCount,
           controlledHexCount,
         ].join(':');
@@ -395,6 +421,7 @@ export class Game {
               <dd>
                 <span>${formatResource(team.cash)}</span>
                 <span class="resource-income">${formatIncome(team.lastCashIncome)}</span>
+                <span class="resource-expense">${formatExpense(team.lastCashExpense)}</span>
               </dd>
             </div>
             <div>
@@ -402,6 +429,7 @@ export class Game {
               <dd>
                 <span>${formatResource(team.manpower)}</span>
                 <span class="resource-income">${formatIncome(team.lastManpowerIncome)}</span>
+                <span class="resource-expense">${formatExpense(team.lastManpowerExpense)}</span>
               </dd>
             </div>
             <div>
@@ -427,25 +455,45 @@ export class Game {
     `;
   }
 
-  handleTeamPanelClick(event) {
-    if (!(event.target instanceof Element)) {
+  handleTeamPanelPointerDown(event) {
+    if (event.button !== 0) {
       return;
     }
 
-    const button = event.target.closest('[data-team-id][data-division-type]');
+    if (this.handleTeamPanelProduction(event)) {
+      event.preventDefault();
+    }
+  }
 
-    if (!button || !this.teamPanel.contains(button)) {
+  handleTeamPanelKeyDown(event) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
       return;
+    }
+
+    if (this.handleTeamPanelProduction(event)) {
+      event.preventDefault();
+    }
+  }
+
+  handleTeamPanelProduction(event) {
+    if (!(event.target instanceof Element)) {
+      return false;
+    }
+
+    const button = event.target.closest('button[data-team-id][data-division-type]');
+
+    if (!button || button.hasAttribute('disabled') || !this.teamPanel.contains(button)) {
+      return false;
     }
 
     const teamId = Number(button.dataset.teamId);
     const divisionType = button.dataset.divisionType;
 
     if (!Number.isInteger(teamId) || !divisionType) {
-      return;
+      return false;
     }
 
-    this.spawnDivision(teamId, divisionType);
+    return this.spawnDivision(teamId, divisionType);
   }
 
   canAffordDivision(team, divisionType) {
@@ -457,8 +505,43 @@ export class Game {
   spendDivisionCost(team, divisionType) {
     const { cost } = getDivisionTypeConfig(divisionType);
 
-    team.cash -= cost.cash;
-    team.manpower -= cost.manpower;
+    this.spendTeamResources(team, cost.cash, cost.manpower);
+  }
+
+  recoverDivisionMorale(division, deltaTimeSeconds) {
+    const team = this.teams.find((currentTeam) => currentTeam.id === division.team);
+
+    if (!team) {
+      return;
+    }
+
+    const { cost } = getDivisionTypeConfig(division.type);
+    const cashCostPerPercent = cost.cash / 100;
+    const manpowerCostPerPercent = cost.manpower / 100;
+    const cashAffordableRecovery = cashCostPerPercent > 0
+      ? team.cash / cashCostPerPercent
+      : Infinity;
+    const manpowerAffordableRecovery = manpowerCostPerPercent > 0
+      ? team.manpower / manpowerCostPerPercent
+      : Infinity;
+    const maxAffordableRecovery = Math.min(
+      cashAffordableRecovery,
+      manpowerAffordableRecovery
+    );
+    const recoveredMorale = division.recoverMorale(
+      deltaTimeSeconds,
+      maxAffordableRecovery
+    );
+
+    if (recoveredMorale <= 0) {
+      return;
+    }
+
+    this.spendTeamResources(
+      team,
+      cashCostPerPercent * recoveredMorale,
+      manpowerCostPerPercent * recoveredMorale
+    );
   }
 
   spawnDivision(teamId, divisionType) {

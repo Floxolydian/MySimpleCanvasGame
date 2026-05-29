@@ -11,14 +11,14 @@ const DIVISION_TYPE_CONFIG = {
   },
   cavalry: {
     label: 'cavalry',
-    speed: 65,
+    speed: 70,
     size: { width: 48, height: 34 },
     combatRange: 100,
     cost: { cash: 65, manpower: 12 },
   },
   tank: {
     label: 'tank',
-    speed: 45,
+    speed: 125,
     size: { width: 58, height: 38 },
     combatRange: 100,
     cost: { cash: 110, manpower: 12 },
@@ -142,19 +142,29 @@ export class Division {
     }
   }
 
-  recoverMorale(deltaTimeSeconds) {
+  recoverMorale(deltaTimeSeconds, maxRecoveryPercent = Infinity) {
     if (this.inCombat || !this.isStationary()) {
-      return;
+      return 0;
     }
 
-    const moraleRecoveryPerSecond = 5;
-    this.morale = clampPercent(
-      this.morale + moraleRecoveryPerSecond * deltaTimeSeconds
+    const moraleRecoveryPerSecond = 1.25;
+    const recoveryAmount = Math.min(
+      moraleRecoveryPerSecond * deltaTimeSeconds,
+      maxRecoveryPercent,
+      MAX_PERCENT - this.morale
     );
+
+    if (recoveryAmount <= 0) {
+      return 0;
+    }
+
+    this.morale = clampPercent(this.morale + recoveryAmount);
 
     if (this.morale === MAX_PERCENT) {
       this.isBroken = false;
     }
+
+    return recoveryAmount;
   }
 
   isStationary() {

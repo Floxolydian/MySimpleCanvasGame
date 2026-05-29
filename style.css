@@ -104,6 +104,12 @@ body {
   font-weight: 700;
 }
 
+.resource-expense {
+  color: #ff9a9a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .team-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
