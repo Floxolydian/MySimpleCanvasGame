@@ -1,6 +1,42 @@
 const MAX_PERCENT = 100;
 const BROKEN_MORALE_THRESHOLD = 20;
 
+const DIVISION_TYPE_CONFIG = {
+  infantry: {
+    label: 'Infantry',
+    speed: 40,
+    size: { width: 48, height: 34 },
+    combatRange: 85,
+  },
+  cavalry: {
+    label: 'cavalry',
+    speed: 65,
+    size: { width: 48, height: 34 },
+    combatRange: 85,
+  },
+  tank: {
+    label: 'tank',
+    speed: 45,
+    size: { width: 58, height: 38 },
+    combatRange: 105,
+  },
+};
+
+export const DIVISION_TYPES = Object.freeze(
+  Object.entries(DIVISION_TYPE_CONFIG).map(([id, config]) => ({
+    id,
+    label: config.label,
+  }))
+);
+
+export function getDivisionTypeConfig(type) {
+  return DIVISION_TYPE_CONFIG[type] ?? DIVISION_TYPE_CONFIG.infantry;
+}
+
+export function isDivisionType(type) {
+  return Object.prototype.hasOwnProperty.call(DIVISION_TYPE_CONFIG, type);
+}
+
 function clampPercent(value) {
   return Math.max(0, Math.min(MAX_PERCENT, value));
 }
@@ -8,25 +44,27 @@ function clampPercent(value) {
 export class Division {
   constructor({
     team,
-    type,
+    type = 'infantry',
     position,
     targetPosition,
-    speed = 50,
+    speed,
     strength = 100,
     morale = 100,
-    combatRange = 85,
+    combatRange,
   }) {
+    const typeConfig = getDivisionTypeConfig(type);
+
     this.team = team;
     this.type = type;
     this.position = { ...position };
     this.targetPosition = { ...targetPosition };
-    this.speed = speed;
+    this.speed = speed ?? typeConfig.speed;
     this.xVelocity = 0;
     this.yVelocity = 0;
-    this.size = { width: 48, height: 34 };
+    this.size = { ...typeConfig.size };
     this.strength = clampPercent(strength);
     this.morale = clampPercent(morale);
-    this.combatRange = combatRange;
+    this.combatRange = combatRange ?? typeConfig.combatRange;
     this.isSelected = false;
     this.inCombat = false;
     this.combatContacts = 0;

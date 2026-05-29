@@ -2,7 +2,7 @@ import { Game } from './game.js';
 import { createBasicScenario } from './scenario.js';
 import { RENDER_SCALE, ZOOM_OUT_FACTOR } from './scale.js';
 
-const GAME_VERSION = '1.0.9';
+const GAME_VERSION = '1.0.10';
 
 const canvas = document.getElementById('game-canvas');
 const teamPanel = document.getElementById('team-panel');

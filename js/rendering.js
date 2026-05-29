@@ -100,6 +100,27 @@ function drawDiagonal(ctx, x1, y1, x2, y2) {
   ctx.stroke();
 }
 
+function drawTankSymbol(ctx, x, y, width, height) {
+  const bodyX = x + width * 0.18;
+  const bodyY = y + height * 0.25;
+  const bodyWidth = width * 0.64;
+  const bodyHeight = height * 0.5;
+  const turretRadius = Math.min(width, height) * 0.16;
+  const turretX = x + width * 0.48;
+  const turretY = y + height * 0.5;
+
+  ctx.strokeRect(bodyX, bodyY, bodyWidth, bodyHeight);
+
+  ctx.beginPath();
+  ctx.arc(turretX, turretY, turretRadius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(turretX + turretRadius, turretY);
+  ctx.lineTo(x + width * 0.88, turretY);
+  ctx.stroke();
+}
+
 function drawVerticalMeter(ctx, x, y, height, percent, color) {
   const barWidth = 3;
   const clampedPercent = Math.max(0, Math.min(100, percent));
@@ -163,6 +184,8 @@ export function drawDivision(ctx, division) {
     drawDiagonal(ctx, x, y + height, x + width, y);
   } else if (division.type === 'cavalry') {
     drawDiagonal(ctx, x, y + height, x + width, y);
+  } else if (division.type === 'tank') {
+    drawTankSymbol(ctx, x, y, width, height);
   }
 
   drawStatusMeters(ctx, division, x, y, width, height);

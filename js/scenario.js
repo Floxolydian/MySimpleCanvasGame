@@ -50,9 +50,9 @@ function createCitySeeds(canvasWidth, canvasHeight) {
     { team: 2, name: CITY_NAMES[4], x: 0.78, y: 0.18 },
     { team: 2, name: CITY_NAMES[5], x: 0.70, y: 0.42 },
     { team: 2, name: CITY_NAMES[6], x: 0.84, y: 0.68 },
-    { team: 3, name: CITY_NAMES[7], x: 0.48, y: 0.20 },
-    { team: 3, name: CITY_NAMES[8], x: 0.55, y: 0.52 },
-    { team: 3, name: CITY_NAMES[9], x: 0.47, y: 0.82 },
+    { team: 3, name: CITY_NAMES[7], x: 0.48, y: 0.62 },
+    { team: 3, name: CITY_NAMES[8], x: 0.55, y: 0.76 },
+    { team: 3, name: CITY_NAMES[9], x: 0.47, y: 0.90 },
   ];
 
   return cityLayouts.map((city) => ({
@@ -67,6 +67,9 @@ export function createBasicScenario(canvasWidth, canvasHeight) {
   const midY = canvasHeight / 2;
   const horizontalOffset = 260;
   const verticalOffset = 120;
+  const greenStartY = canvasHeight * 0.78;
+  const greenHorizontalOffset = 110;
+  const greenVerticalOffset = 85;
 
   return {
     teams: createStartingTeams(),
@@ -103,15 +106,27 @@ export function createBasicScenario(canvasWidth, canvasHeight) {
       new Division({
         team: 3,
         type: 'infantry',
-        position: { x: midX, y: midY - verticalOffset * 1.8 },
-        targetPosition: { x: midX, y: midY - verticalOffset * 1.8 },
+        position: {
+          x: midX - greenHorizontalOffset,
+          y: greenStartY - greenVerticalOffset,
+        },
+        targetPosition: {
+          x: midX - greenHorizontalOffset,
+          y: greenStartY - greenVerticalOffset,
+        },
         speed: 40,
       }),
       new Division({
         team: 3,
         type: 'cavalry',
-        position: { x: midX, y: midY + verticalOffset * 1.8 },
-        targetPosition: { x: midX, y: midY + verticalOffset * 1.8 },
+        position: {
+          x: midX + greenHorizontalOffset,
+          y: greenStartY + greenVerticalOffset,
+        },
+        targetPosition: {
+          x: midX + greenHorizontalOffset,
+          y: greenStartY + greenVerticalOffset,
+        },
         speed: 65,
       }),
     ],

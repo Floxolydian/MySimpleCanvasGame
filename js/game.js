@@ -1,3 +1,4 @@
+import { Division, DIVISION_TYPES, isDivisionType } from './division.js';
 import {
   clearCanvas,
   drawControlHexes,
@@ -62,6 +63,9 @@ export class Game {
     this.controlHexes = this.createControlHexes(CONTROL_HEX_RADIUS);
     this.initializeControlHexes();
     this.cities = this.createCities(citySeeds);
+    if (this.teamPanel) {
+      this.teamPanel.addEventListener('click', (event) => this.handleTeamPanelClick(event));
+    }
     this.renderTeamPanel();
   }
 
@@ -290,6 +294,14 @@ export class Game {
     const teamRows = this.teams.map((team) => {
       const cityCount = this.cities.filter((city) => city.hex.team === team.id).length;
       const color = TEAM_COLORS[team.id] ?? '#dddddd';
+      const divisionButtons = DIVISION_TYPES.map(({ id, label }) => `
+        <button
+          type="button"
+          class="division-button"
+          data-team-id="${team.id}"
+          data-division-type="${id}"
+        >${label}</button>
+      `).join('');
 
       return `
         <section class="team-card">
@@ -307,6 +319,9 @@ export class Game {
               <dd>${cityCount}</dd>
             </div>
           </dl>
+          <div class="team-actions" aria-label="${team.name} division controls">
+            ${divisionButtons}
+          </div>
         </section>
       `;
     }).join('');
@@ -316,6 +331,79 @@ export class Game {
       <p class="income-note">Cities pay ${CITY_INCOME_AMOUNT.toFixed(1)} cash every ${CITY_INCOME_INTERVAL_SECONDS} seconds.</p>
       ${teamRows}
     `;
+  }
+
+  handleTeamPanelClick(event) {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const button = event.target.closest('[data-team-id][data-division-type]');
+
+    if (!button || !this.teamPanel.contains(button)) {
+      return;
+    }
+
+    const teamId = Number(button.dataset.teamId);
+    const divisionType = button.dataset.divisionType;
+
+    if (!Number.isInteger(teamId) || !divisionType) {
+      return;
+    }
+
+    this.spawnDivision(teamId, divisionType);
+  }
+
+  spawnDivision(teamId, divisionType) {
+    const teamExists = this.teams.some((team) => team.id === teamId);
+
+    if (!teamExists || !isDivisionType(divisionType)) {
+      return;
+    }
+
+    const spawnPoint = this.getTeamSpawnPoint(teamId, divisionType);
+    const division = new Division({
+      team: teamId,
+      type: divisionType,
+      position: spawnPoint,
+      targetPosition: spawnPoint,
+    });
+    const clampedSpawnPoint = this.clampPointToMap(division, spawnPoint.x, spawnPoint.y);
+
+    division.position = { ...clampedSpawnPoint };
+    division.targetPosition = { ...clampedSpawnPoint };
+    this.divisions.push(division);
+  }
+
+  getTeamSpawnPoint(teamId, divisionType) {
+    const teamDivisions = this.divisions.filter((division) => division.team === teamId);
+    const ownedCities = this.cities.filter((city) => city.hex.team === teamId);
+    const startingCities = this.cities.filter((city) => city.startingTeam === teamId);
+    const spawnCities = ownedCities.length > 0 ? ownedCities : startingCities;
+
+    if (spawnCities.length > 0) {
+      const city = spawnCities[teamDivisions.length % spawnCities.length];
+      const angle = teamDivisions.length * 2.399963229728653;
+      const distance = divisionType === 'tank'
+        ? CONTROL_HEX_RADIUS * 2.6
+        : CONTROL_HEX_RADIUS * 2.1;
+
+      return {
+        x: city.hex.x + Math.cos(angle) * distance,
+        y: city.hex.y + Math.sin(angle) * distance,
+      };
+    }
+
+    const existingDivision = teamDivisions[0];
+
+    if (existingDivision) {
+      return { ...existingDivision.position };
+    }
+
+    return {
+      x: this.width / 2,
+      y: this.height / 2,
+    };
   }
 
   updateControlHexes() {
