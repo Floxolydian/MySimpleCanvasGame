@@ -35,9 +35,9 @@ export const CITY_NAMES = [
 
 function createStartingTeams() {
   return [
-    { id: 1, name: 'Blue Company', cash: 100.0 },
-    { id: 2, name: 'Red Company', cash: 100.0 },
-    { id: 3, name: 'Green Company', cash: 100.0 },
+    { id: 1, name: 'Blue Company', cash: 100.0, manpower: 50.0 },
+    { id: 2, name: 'Red Company', cash: 100.0, manpower: 50.0 },
+    { id: 3, name: 'Green Company', cash: 100.0, manpower: 50.0 },
   ];
 }
 

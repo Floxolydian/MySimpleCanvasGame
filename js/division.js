@@ -3,22 +3,25 @@ const BROKEN_MORALE_THRESHOLD = 20;
 
 const DIVISION_TYPE_CONFIG = {
   infantry: {
-    label: 'Infantry',
+    label: 'infantry',
     speed: 40,
     size: { width: 48, height: 34 },
-    combatRange: 85,
+    combatRange: 100,
+    cost: { cash: 50, manpower: 15 },
   },
   cavalry: {
     label: 'cavalry',
     speed: 65,
     size: { width: 48, height: 34 },
-    combatRange: 85,
+    combatRange: 100,
+    cost: { cash: 65, manpower: 12 },
   },
   tank: {
     label: 'tank',
     speed: 45,
     size: { width: 58, height: 38 },
-    combatRange: 105,
+    combatRange: 100,
+    cost: { cash: 110, manpower: 12 },
   },
 };
 
@@ -26,6 +29,7 @@ export const DIVISION_TYPES = Object.freeze(
   Object.entries(DIVISION_TYPE_CONFIG).map(([id, config]) => ({
     id,
     label: config.label,
+    cost: { ...config.cost },
   }))
 );
 

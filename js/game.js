@@ -1,4 +1,9 @@
-import { Division, DIVISION_TYPES, isDivisionType } from './division.js';
+import {
+  Division,
+  DIVISION_TYPES,
+  getDivisionTypeConfig,
+  isDivisionType,
+} from './division.js';
 import {
   clearCanvas,
   drawControlHexes,
@@ -13,7 +18,10 @@ const FLEE_PADDING = 32;
 const CONTROL_HEX_RADIUS = 34;
 const CONTROL_CAPTURE_DISTANCE = CONTROL_HEX_RADIUS * 2.6;
 const CITY_INCOME_INTERVAL_SECONDS = 5;
-const CITY_INCOME_AMOUNT = 1.0;
+const CITY_CASH_INCOME_AMOUNT = 1.0;
+const CITY_MANPOWER_INCOME_AMOUNT = 0.1;
+const CONTROL_HEX_CASH_INCOME_AMOUNT = 0.05;
+const CONTROL_HEX_MANPOWER_INCOME_AMOUNT = 0.02;
 
 function getDivisionBounds(division, canvasWidth, canvasHeight, padding = 0) {
   const halfWidth = division.size.width / 2;
@@ -29,6 +37,10 @@ function getDivisionBounds(division, canvasWidth, canvasHeight, padding = 0) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function formatResource(value) {
+  return value.toFixed(2);
 }
 
 export class Game {
@@ -50,7 +62,7 @@ export class Game {
     this.height = height;
     this.renderScale = renderScale;
     this.divisions = divisions;
-    this.teams = teams;
+    this.teams = teams.map((team) => ({ manpower: 0, ...team }));
     this.teamPanel = teamPanel;
     this.version = version;
     this.cityIncomeTimer = 0;
@@ -143,7 +155,7 @@ export class Game {
     }
 
     this.updateControlHexes();
-    this.updateCityIncome(deltaTimeSeconds);
+    this.updateIncome(deltaTimeSeconds);
     this.renderTeamPanel();
 
     this.updateCombatContacts();
@@ -252,16 +264,27 @@ export class Game {
     return closestHex;
   }
 
-  updateCityIncome(deltaTimeSeconds) {
+  updateIncome(deltaTimeSeconds) {
     this.cityIncomeTimer += deltaTimeSeconds;
 
     while (this.cityIncomeTimer >= CITY_INCOME_INTERVAL_SECONDS) {
       this.cityIncomeTimer -= CITY_INCOME_INTERVAL_SECONDS;
-      this.awardCityIncome();
+      this.awardIncome();
     }
   }
 
-  awardCityIncome() {
+  awardIncome() {
+    for (const hex of this.controlHexes) {
+      const controllingTeam = this.teams.find((team) => team.id === hex.team);
+
+      if (!controllingTeam) {
+        continue;
+      }
+
+      controllingTeam.cash += CONTROL_HEX_CASH_INCOME_AMOUNT;
+      controllingTeam.manpower += CONTROL_HEX_MANPOWER_INCOME_AMOUNT;
+    }
+
     for (const city of this.cities) {
       const controllingTeam = this.teams.find((team) => team.id === city.hex.team);
 
@@ -269,8 +292,17 @@ export class Game {
         continue;
       }
 
-      controllingTeam.cash += CITY_INCOME_AMOUNT;
+      controllingTeam.cash += CITY_CASH_INCOME_AMOUNT;
+      controllingTeam.manpower += CITY_MANPOWER_INCOME_AMOUNT;
     }
+  }
+
+  getTeamCityCount(teamId) {
+    return this.cities.filter((city) => city.hex.team === teamId).length;
+  }
+
+  getTeamControlledHexCount(teamId) {
+    return this.controlHexes.filter((hex) => hex.team === teamId).length;
   }
 
   renderTeamPanel() {
@@ -280,8 +312,16 @@ export class Game {
 
     const signature = this.teams
       .map((team) => {
-        const cityCount = this.cities.filter((city) => city.hex.team === team.id).length;
-        return `${team.id}:${team.cash.toFixed(1)}:${cityCount}`;
+        const cityCount = this.getTeamCityCount(team.id);
+        const controlledHexCount = this.getTeamControlledHexCount(team.id);
+
+        return [
+          team.id,
+          team.cash.toFixed(2),
+          team.manpower.toFixed(2),
+          cityCount,
+          controlledHexCount,
+        ].join(':');
       })
       .join('|');
 
@@ -292,16 +332,24 @@ export class Game {
     this.teamPanelSignature = signature;
 
     const teamRows = this.teams.map((team) => {
-      const cityCount = this.cities.filter((city) => city.hex.team === team.id).length;
+      const cityCount = this.getTeamCityCount(team.id);
+      const controlledHexCount = this.getTeamControlledHexCount(team.id);
       const color = TEAM_COLORS[team.id] ?? '#dddddd';
-      const divisionButtons = DIVISION_TYPES.map(({ id, label }) => `
-        <button
-          type="button"
-          class="division-button"
-          data-team-id="${team.id}"
-          data-division-type="${id}"
-        >${label}</button>
-      `).join('');
+      const divisionButtons = DIVISION_TYPES.map(({ id, label, cost }) => {
+        const disabledAttribute = this.canAffordDivision(team, id) ? '' : ' disabled';
+
+        return `
+          <button
+            type="button"
+            class="division-button"
+            data-team-id="${team.id}"
+            data-division-type="${id}"
+            title="${cost.cash} cash, ${cost.manpower} manpower"
+            aria-label="${label}: ${cost.cash} cash, ${cost.manpower} manpower"
+            ${disabledAttribute}
+          >${label}</button>
+        `;
+      }).join('');
 
       return `
         <section class="team-card">
@@ -312,11 +360,19 @@ export class Game {
           <dl>
             <div>
               <dt>Cash</dt>
-              <dd>${team.cash.toFixed(1)}</dd>
+              <dd>${formatResource(team.cash)}</dd>
+            </div>
+            <div>
+              <dt>Manpower</dt>
+              <dd>${formatResource(team.manpower)}</dd>
             </div>
             <div>
               <dt>Cities</dt>
               <dd>${cityCount}</dd>
+            </div>
+            <div>
+              <dt>Hexes</dt>
+              <dd>${controlledHexCount}</dd>
             </div>
           </dl>
           <div class="team-actions" aria-label="${team.name} division controls">
@@ -328,7 +384,7 @@ export class Game {
 
     this.teamPanel.innerHTML = `
       <h1>Teams</h1>
-      <p class="income-note">Cities pay ${CITY_INCOME_AMOUNT.toFixed(1)} cash every ${CITY_INCOME_INTERVAL_SECONDS} seconds.</p>
+      <p class="income-note">Every ${CITY_INCOME_INTERVAL_SECONDS} seconds: cities pay ${formatResource(CITY_CASH_INCOME_AMOUNT)} cash and ${formatResource(CITY_MANPOWER_INCOME_AMOUNT)} manpower; controlled hexes pay ${formatResource(CONTROL_HEX_CASH_INCOME_AMOUNT)} cash and ${formatResource(CONTROL_HEX_MANPOWER_INCOME_AMOUNT)} manpower.</p>
       ${teamRows}
     `;
   }
@@ -354,11 +410,24 @@ export class Game {
     this.spawnDivision(teamId, divisionType);
   }
 
-  spawnDivision(teamId, divisionType) {
-    const teamExists = this.teams.some((team) => team.id === teamId);
+  canAffordDivision(team, divisionType) {
+    const { cost } = getDivisionTypeConfig(divisionType);
 
-    if (!teamExists || !isDivisionType(divisionType)) {
-      return;
+    return team.cash >= cost.cash && team.manpower >= cost.manpower;
+  }
+
+  spendDivisionCost(team, divisionType) {
+    const { cost } = getDivisionTypeConfig(divisionType);
+
+    team.cash -= cost.cash;
+    team.manpower -= cost.manpower;
+  }
+
+  spawnDivision(teamId, divisionType) {
+    const team = this.teams.find((currentTeam) => currentTeam.id === teamId);
+
+    if (!team || !isDivisionType(divisionType) || !this.canAffordDivision(team, divisionType)) {
+      return false;
     }
 
     const spawnPoint = this.getTeamSpawnPoint(teamId, divisionType);
@@ -372,7 +441,12 @@ export class Game {
 
     division.position = { ...clampedSpawnPoint };
     division.targetPosition = { ...clampedSpawnPoint };
+    this.spendDivisionCost(team, divisionType);
     this.divisions.push(division);
+    this.teamPanelSignature = '';
+    this.renderTeamPanel();
+
+    return true;
   }
 
   getTeamSpawnPoint(teamId, divisionType) {
