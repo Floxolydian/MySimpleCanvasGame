@@ -190,7 +190,7 @@ export function clearCanvas(ctx, width, height) {
 
 export function drawGameVersion(ctx, version) {
   ctx.save();
-  ctx.font = '10px Arial, sans-serif';
+  ctx.font = '30px Arial, sans-serif';
   ctx.fillStyle = '#999999';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -204,7 +204,7 @@ export function drawFpsCounter(ctx, averageFps) {
   }
 
   ctx.save();
-  ctx.font = '10px Arial, sans-serif';
+  ctx.font = '30px Arial, sans-serif';
   ctx.fillStyle = '#999999';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
